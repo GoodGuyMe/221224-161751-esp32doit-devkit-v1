@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "\\\\openhabian.local\\bootje.erickemmeren.nl\\"
+		},
+		{
+			"name": "221224-161751-esp32doit-devkit-v1",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}
