@@ -124,9 +124,9 @@ void loop() {
     updateGSM();
     updateGPS(displayInfo);
 
-    if (doc.memoryUsage() > 120) {
+    if (doc.memoryUsage() > 1200) {
         size_t size_output = serializeJson(doc, output);
-        if (size_output > 95) {
+        if (size_output > 950) {
             Serial.println();
             Serial.println(size_output);
             Serial.println(doc.memoryUsage());
