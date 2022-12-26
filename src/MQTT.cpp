@@ -1,6 +1,6 @@
 #include <MQTT.h>
 
-extern const char* publish_path = "boat";
+const char* publish_path = "boat";
 
 PubSubClient client;
 
