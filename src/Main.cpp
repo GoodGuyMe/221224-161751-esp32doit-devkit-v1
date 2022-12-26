@@ -27,7 +27,7 @@ void setup() {
 
     Serial.println("GPS NEO 6M + GSM + BMP280");
     Serial.setTimeout(500);
-    setupMQTT();
+    // setupMQTT();
     setupGPS();
     setupGSM();
     setupBMP();
@@ -86,7 +86,7 @@ void displayInfo()
 }
 
 void loop() {
-    updateMQTT();
+    // updateMQTT();
     updateGSM();
     updateGPS(displayInfo);
 
