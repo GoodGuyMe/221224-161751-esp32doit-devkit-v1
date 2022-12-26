@@ -1,6 +1,8 @@
+#pragma once
+
 #include <TinyGPSPlus.h>
 
-TinyGPSPlus gps;
+extern TinyGPSPlus gps;
 
 void setupGPS();
 void updateGPS(std::function<void(void)>);

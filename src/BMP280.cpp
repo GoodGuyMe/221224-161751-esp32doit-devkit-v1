@@ -2,6 +2,8 @@
 
 Adafruit_BMP280 bmp;
 
+double tempOffset = -1.5;
+
 void setupBMP() {
     bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,     /* Operating Mode. */
                   Adafruit_BMP280::SAMPLING_X2,     /* Temp. oversampling */

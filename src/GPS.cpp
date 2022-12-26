@@ -1,5 +1,7 @@
 #include <GPS.h>
 
+TinyGPSPlus gps;
+
 void setupGPS() {
     Serial2.begin(9600);
 }

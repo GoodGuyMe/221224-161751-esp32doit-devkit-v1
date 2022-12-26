@@ -1,8 +1,11 @@
 #include <MQTT.h>
 
-PubSubClient client(espClient); 
+extern const char* publish_path = "boat";
+
+PubSubClient client;
 
 void setupMQTT() {
+    client.setClient(wifiClient); 
     if (WiFi.status() != WL_CONNECTED) {
         setupWiFi();
     }

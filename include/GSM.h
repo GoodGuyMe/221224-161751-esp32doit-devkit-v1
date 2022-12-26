@@ -1,3 +1,5 @@
+#pragma once
+
 #define _SS_MAX_RX_BUFF 512
 #include <SoftwareSerial.h>
 #include <Wire.h>

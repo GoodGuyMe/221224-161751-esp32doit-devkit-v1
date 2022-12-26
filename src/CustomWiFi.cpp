@@ -1,5 +1,6 @@
 #include <CustomWiFi.h>
 
+WiFiClient wifiClient;
 
 void setupWiFi() {
   delay(10);
@@ -23,7 +24,7 @@ void makeWifiPost(char* json) {
     setupWiFi();
   }
   HTTPClient http;
-  String serverPath = "bootje.erickemmeren.nl/data";
+  String serverPath = "https://bootje.erickemmeren.nl/data";
   http.begin(serverPath);
   http.addHeader("Content-Type", "application/json");
   int responseCode = http.POST(json);

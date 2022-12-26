@@ -33,10 +33,11 @@ void setup() {
     setupBMP();
 }
 
-void addMeasurement(double lat, double lng, double spd, double temp, double dir, double timestamp) {
+void addMeasurement(double lat, double lng, double spd, double temp, double dir, double datestamp, double timestamp) {
     JsonObject point = data_points.createNestedObject();
     point["t"] = timestamp;
-    JsonObject measured_data = point.createNestedObject("d");
+    point["d"] = datestamp;
+    JsonObject measured_data = point.createNestedObject("p");
     measured_data["A"] = lat;
     measured_data["O"] = lng;
     measured_data["S"] = spd;
@@ -52,28 +53,35 @@ void displayInfo()
         avg_lat += gps.location.lat();
         avg_lng += gps.location.lng();
         avg_speed += gps.speed.knots();
-        avg_dir += gps.course.value();
+        avg_dir += gps.course.deg();
         if ((millis() - start_time) > period) {
 
-        start_time = millis();
-        float timestamp = gps.time.value();
+            start_time = millis();
+            float datestamp = gps.date.value();
+            float timestamp = gps.time.value();
 
-        addMeasurement(
-            avg_lat / (double)count, 
-            avg_lng / (double)count, 
-            round2(avg_speed / (double)count), 
-            round2(getTemperature()), 
-            round2(avg_dir / (double)count),
-            timestamp / 100.0
-        );
-        avg_lat = 0;
-        avg_lng = 0;
-        avg_speed = 0;
-        count = 0;
+            addMeasurement(
+                avg_lat / (double)count, 
+                avg_lng / (double)count, 
+                round2(avg_speed / (double)count), 
+                round2(getTemperature()), 
+                round2(avg_dir / (double)count),
+                datestamp,
+                timestamp / 100.0
+            );
+            avg_lat = 0;
+            avg_lng = 0;
+            avg_speed = 0;
+            avg_dir = 0;
+            count = 0;
         }
         count++;   
-    } else {
-        Serial.println("Not all items valid");
+    } else {   
+        if (gps.satellites.value() == 0) {
+            Serial.print(".");
+        } else {
+            Serial.println("Not all items valid");
+        }
     }
 }
 
@@ -82,13 +90,12 @@ void loop() {
     updateGSM();
     updateGPS(displayInfo);
 
-    if (doc.memoryUsage() > 120) {
+    if (doc.memoryUsage() > 1200) {
         size_t size_output = serializeJson(doc, output);
-        if (size_output > 95) {
+        if (size_output > 950) {
             Serial.println();
             Serial.println(size_output);
             Serial.println(doc.memoryUsage());
-            serializeJson(doc, output);
             makeWifiPost(output);
             serializeJsonPretty(doc, Serial);
             doc.clear();

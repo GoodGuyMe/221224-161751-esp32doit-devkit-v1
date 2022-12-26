@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Arduino.h>
 #include <BMP280.h>
 #include <CustomWiFi.h>
