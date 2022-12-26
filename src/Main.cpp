@@ -12,8 +12,15 @@ double avg_lat = 0;
 double avg_lng = 0;
 double avg_speed = 0;
 double avg_dir = 0;
+double min_speed = 1.5;
 unsigned long start_time = 0;
-unsigned int period = 1000;
+unsigned int slow_period = 10 * 60e3;   // 10 Minutes (s)
+unsigned int fast_period = 1e3;         //  1 Second  (s)
+unsigned int period = slow_period;
+unsigned int time_fast_period = 1 * 60e6; // 1 Minute (us)
+
+hw_timer_t * period_timer;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 // rounds a number to 2 decimal places
 // example: round(3.14159) -> 3.14
@@ -21,9 +28,12 @@ double round2(double value) {
     return (int)(value * 100 + 0.5) / 100.0;
 }
 
+
 void setup() {
     Serial.begin(115200);
     delay(10);
+
+    period_timer = NULL;
 
     Serial.println("GPS NEO 6M + GSM + BMP280");
     Serial.setTimeout(500);
@@ -45,16 +55,40 @@ void addMeasurement(double lat, double lng, double spd, double temp, double dir,
     measured_data["D"] = dir;
 }
 
+void ARDUINO_ISR_ATTR on_timer() {
+    portENTER_CRITICAL_ISR(&timerMux);
+    period = slow_period;
+    portEXIT_CRITICAL_ISR(&timerMux);
+
+}
+
 void displayInfo()
 {
     if (validGPS()) {
-        Serial.print("Satalites: ");
-        Serial.println(gps.satellites.value());
         avg_lat += gps.location.lat();
         avg_lng += gps.location.lng();
         avg_speed += gps.speed.knots();
         avg_dir += gps.course.deg();
+        if (gps.speed.knots() > min_speed) {
+            portENTER_CRITICAL(&timerMux);
+            period = fast_period;
+            if (period_timer == NULL) {
+                period_timer = timerBegin(0, 80, true);
+                if (period_timer == NULL) {
+                    period = fast_period;
+                }
+                timerAttachInterrupt(period_timer, &on_timer, true);
+                timerAlarmWrite(period_timer, time_fast_period, false);
+                timerAlarmEnable(period_timer);
+            } else {
+                timerRestart(period_timer);
+                timerAlarmEnable(period_timer);
+            }
+            portEXIT_CRITICAL(&timerMux);
+        }
         if ((millis() - start_time) > period) {
+            Serial.print("Satalites: ");
+            Serial.println(gps.satellites.value());
 
             start_time = millis();
             float datestamp = gps.date.value();
@@ -90,9 +124,9 @@ void loop() {
     updateGSM();
     updateGPS(displayInfo);
 
-    if (doc.memoryUsage() > 1200) {
+    if (doc.memoryUsage() > 120) {
         size_t size_output = serializeJson(doc, output);
-        if (size_output > 950) {
+        if (size_output > 95) {
             Serial.println();
             Serial.println(size_output);
             Serial.println(doc.memoryUsage());
