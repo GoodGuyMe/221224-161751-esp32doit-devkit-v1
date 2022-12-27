@@ -15,8 +15,8 @@ double avg_speed = 0;
 double avg_dir = 0;
 double min_speed = 1.5;
 unsigned long start_time = 0;
-unsigned int slow_period = 60 * 60e3;   // 10 Minutes (s)
-unsigned int fast_period = 1e3;         //  1 Second  (s)
+unsigned int slow_period = 1 * 60e3;   // 10 Minutes (ms)
+unsigned int fast_period = 1e3;         //  1 Second  (ms)
 unsigned int period = slow_period;
 unsigned int time_fast_period = 1 * 60e6; // 1 Minute (us)
 
@@ -26,7 +26,7 @@ portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 // rounds a number to 2 decimal places
 // example: round(3.14159) -> 3.14
 double round2(double value) {
-    return (int)(value * 100 + 0.5) / 100.0;
+    return (long)(value * 100 + 0.5) / 100.0;
 }
 
 
@@ -104,14 +104,18 @@ void displayInfo()
                 datestamp,
                 timestamp / 100.0
             );
+
+            size_output = serializeJson(doc, output);
+            Serial.print("Size of output: ");
+            Serial.println(size_output);
+            Serial.print("Count: ");
+            Serial.println(count);
+
             avg_lat = 0;
             avg_lng = 0;
             avg_speed = 0;
             avg_dir = 0;
             count = 0;
-
-            size_output = serializeJson(doc, output);
-            Serial.println(size_output);
         }
         count++;   
     } else {   
@@ -127,13 +131,14 @@ void loop() {
     // updateMQTT();
     updateGSM();
     updateGPS(displayInfo);
-    if (size_output > 950) {
+    if (size_output > 95) {
         Serial.println();
         Serial.println(size_output);
         Serial.println(doc.memoryUsage());
         makeWifiPost(output);
         serializeJsonPretty(doc, Serial);
         doc.clear();
+        size_output = 0;
         data_points = doc.createNestedArray("dp");
     }
 }
