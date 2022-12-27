@@ -5,6 +5,7 @@
 DynamicJsonDocument doc(2024);
 JsonArray data_points = doc.createNestedArray("dp");
 char output[1024];
+size_t size_output = 0;
 
 unsigned long count = 0;
 
@@ -108,6 +109,8 @@ void displayInfo()
             avg_speed = 0;
             avg_dir = 0;
             count = 0;
+            
+            size_output = serializeJson(doc, output);
         }
         count++;   
     } else {   
@@ -123,17 +126,13 @@ void loop() {
     // updateMQTT();
     updateGSM();
     updateGPS(displayInfo);
-
-    if (doc.memoryUsage() > 1200) {
-        size_t size_output = serializeJson(doc, output);
-        if (size_output > 950) {
-            Serial.println();
-            Serial.println(size_output);
-            Serial.println(doc.memoryUsage());
-            makeWifiPost(output);
-            serializeJsonPretty(doc, Serial);
-            doc.clear();
-            data_points = doc.createNestedArray("dp");
-        }
+    if (size_output > 950) {
+        Serial.println();
+        Serial.println(size_output);
+        Serial.println(doc.memoryUsage());
+        makeWifiPost(output);
+        serializeJsonPretty(doc, Serial);
+        doc.clear();
+        data_points = doc.createNestedArray("dp");
     }
 }
