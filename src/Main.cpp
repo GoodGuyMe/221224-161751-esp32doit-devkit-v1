@@ -4,7 +4,7 @@
 
 DynamicJsonDocument doc(2024);
 JsonArray data_points = doc.createNestedArray("dp");
-char output[1024];
+char output[2 024];
 size_t size_output = 0;
 
 unsigned long count = 0;
@@ -15,8 +15,8 @@ double avg_speed = 0;
 double avg_dir = 0;
 double min_speed = 1.5;
 unsigned long start_time = 0;
-unsigned int slow_period = 3600e3;   // 10 Minutes (ms)
-unsigned int fast_period =    3e3;         //  1 Second  (ms)
+unsigned int slow_period = 3600e3;      // 1 hour     (ms)
+unsigned int fast_period =    3e3;      // 3 seconds  (ms)
 unsigned int period = slow_period;
 unsigned int time_fast_period = 1 * 60e6; // 1 Minute (us)
 
