@@ -8,9 +8,13 @@ void setupWiFi() {
   Serial.print("Connecting to ");
   Serial.println(ssid);
   WiFi.begin(ssid, password);
+  int connection_count = 0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+    if (connection_count++ > 60) {
+      setupWiFi();
+    }
   }
   randomSeed(micros());
   Serial.println("");
