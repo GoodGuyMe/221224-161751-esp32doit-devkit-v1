@@ -109,8 +109,9 @@ void displayInfo()
             avg_speed = 0;
             avg_dir = 0;
             count = 0;
-            
+
             size_output = serializeJson(doc, output);
+            Serial.println(size_output);
         }
         count++;   
     } else {   
