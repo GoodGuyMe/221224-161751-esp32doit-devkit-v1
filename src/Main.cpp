@@ -15,8 +15,8 @@ double avg_speed = 0;
 double avg_dir = 0;
 double min_speed = 1.5;
 unsigned long start_time = 0;
-unsigned int slow_period = 1 * 60e3;   // 10 Minutes (ms)
-unsigned int fast_period = 1e3;         //  1 Second  (ms)
+unsigned int slow_period = 3600e3;   // 10 Minutes (ms)
+unsigned int fast_period =    3e3;         //  1 Second  (ms)
 unsigned int period = slow_period;
 unsigned int time_fast_period = 1 * 60e6; // 1 Minute (us)
 
@@ -131,7 +131,7 @@ void loop() {
     // updateMQTT();
     updateGSM();
     updateGPS(displayInfo);
-    if (size_output > 95) {
+    if (size_output > 950) {
         Serial.println();
         Serial.println(size_output);
         Serial.println(doc.memoryUsage());
