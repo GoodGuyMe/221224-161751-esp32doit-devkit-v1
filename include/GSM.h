@@ -5,8 +5,10 @@
 #include <Wire.h>
 #include <SPI.h>
 
+#include "HTTP.h"
+
 #define MYPORT_TX 12
 #define MYPORT_RX 13
 
 void setupGSM();
-void updateGSM();
+void sendGSM(const char* body);

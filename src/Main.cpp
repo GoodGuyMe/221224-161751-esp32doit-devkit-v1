@@ -125,13 +125,16 @@ void displayInfo()
 
 void loop() {
     // updateMQTT();
-    updateGSM();
     updateGPS(displayInfo);
     if (size_output > 950) {
         Serial.println();
         Serial.println(size_output);
         Serial.println(doc.memoryUsage());
-        makeWifiPost(output);
+        if (WiFi.status() == WL_CONNECTED) {
+            makeWifiPost(output);
+        } else {
+            sendGSM(output);
+        }
         serializeJsonPretty(doc, Serial);
         doc.clear();
         data_points = doc.createNestedArray("dp");
