@@ -7,10 +7,11 @@ JsonArray data_points = doc.createNestedArray("dp");
 char output[2024];
 size_t size_output = 0;
 
-const size_t size_moving_average = 256;
+const size_t size_moving_average = 512;
 double moving_average[size_moving_average]; 
-int moving_average_count = 0;
+unsigned int moving_average_count = 0;
 
+unsigned int message_count = 0;
 unsigned long count = 0;
 
 double avg_lat = 0;
@@ -24,6 +25,7 @@ unsigned int fast_period =   10e3;      // 10 seconds (ms)
 unsigned int period = slow_period;
 unsigned int time_fast_period = 1 * 60e6; // 1 Minute (us)
 
+
 hw_timer_t * period_timer;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -35,8 +37,11 @@ double round2(double value) {
 
 
 void setup() {
-    Serial.begin(115200);
     delay(10);
+
+    pinMode(2, OUTPUT);
+    digitalWrite(2, HIGH);
+    Serial.begin(115200);
 
     period_timer = NULL;
 
@@ -49,6 +54,7 @@ void setup() {
     for (int i = 0; i < size_moving_average; i++) {
         moving_average[i] = 0.0;
     }
+    digitalWrite(2, LOW);
 }
 
 void addMeasurement(double lat, double lng, double spd, double temp, double dir, double datestamp, double timestamp) {
@@ -74,6 +80,7 @@ void addTempMeasurement(double temp, double datestamp, double timestamp) {
 void ARDUINO_ISR_ATTR on_timer() {
     portENTER_CRITICAL_ISR(&timerMux);
     period = slow_period;
+    digitalWrite(2, LOW);
     portEXIT_CRITICAL_ISR(&timerMux);
 
 }
@@ -84,6 +91,9 @@ double movingAverage(double speed) {
     double result = 0.0;
     for (int i = 0; i < size_moving_average; i++) {
         result += moving_average[i];
+    }
+    if (moving_average_count == 0) {
+        Serial.println(millis());
     }
     return result / (double)size_moving_average;
 }
@@ -98,6 +108,7 @@ void displayInfo()
         if (movingAverage(gps.speed.knots()) > min_speed) {
             portENTER_CRITICAL(&timerMux);
             period = fast_period;
+            digitalWrite(2, HIGH);
             if (period_timer == NULL) {
                 period_timer = timerBegin(0, 80, true);
                 if (period_timer == NULL) {
@@ -120,7 +131,7 @@ void displayInfo()
             float datestamp = gps.date.value();
             float timestamp = gps.time.value();
 
-            if (period == fast_period) {
+            if (period == fast_period || message_count == 0) {
                 addMeasurement(
                     avg_lat / (double)count, 
                     avg_lng / (double)count, 
@@ -137,6 +148,7 @@ void displayInfo()
                     timestamp / 100.0
                 );
             }
+            message_count = (message_count + 1) % 6;
             size_output = serializeJson(doc, output);
             Serial.print("Size of output: ");
             Serial.println(size_output);
