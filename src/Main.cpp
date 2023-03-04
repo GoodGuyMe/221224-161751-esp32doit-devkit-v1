@@ -17,7 +17,7 @@ double avg_lat = 0;
 double avg_lng = 0;
 double avg_speed = 0;
 double avg_dir = 0;
-double min_speed = 2.0;
+double min_speed = 3;
 unsigned long start_time = 0;
 unsigned int slow_period = 3600e3;      // 1 hour     (ms)
 unsigned int fast_period =   10e3;      // 10 seconds (ms)
@@ -42,7 +42,6 @@ void setup() {
 
     Serial.println("GPS NEO 6M + GSM + BMP280");
     Serial.setTimeout(500);
-    // setupMQTT();
     setupGPS();
     setupGSM();
     setupBMP();
@@ -62,6 +61,14 @@ void addMeasurement(double lat, double lng, double spd, double temp, double dir,
     measured_data["S"] = spd;
     measured_data["T"] = temp;
     measured_data["D"] = dir;
+}
+
+void addTempMeasurement(double temp, double datestamp, double timestamp) {
+    JsonObject point = data_points.createNestedObject();
+    point["t"] = timestamp;
+    point["d"] = datestamp;
+    JsonObject measured_data = point.createNestedObject("p");
+    measured_data["T"] = temp;
 }
 
 void ARDUINO_ISR_ATTR on_timer() {
@@ -113,16 +120,23 @@ void displayInfo()
             float datestamp = gps.date.value();
             float timestamp = gps.time.value();
 
-            addMeasurement(
-                avg_lat / (double)count, 
-                avg_lng / (double)count, 
-                round2(avg_speed / (double)count), 
-                round2(getTemperature()), 
-                round2(avg_dir / (double)count),
-                datestamp,
-                timestamp / 100.0
-            );
-
+            if (period == fast_period) {
+                addMeasurement(
+                    avg_lat / (double)count, 
+                    avg_lng / (double)count, 
+                    round2(avg_speed / (double)count), 
+                    round2(getTemperature()), 
+                    round2(avg_dir / (double)count),
+                    datestamp,
+                    timestamp / 100.0
+                );
+            } else {
+                addTempMeasurement(
+                    round2(getTemperature()),
+                    datestamp,
+                    timestamp / 100.0
+                );
+            }
             size_output = serializeJson(doc, output);
             Serial.print("Size of output: ");
             Serial.println(size_output);
@@ -135,24 +149,30 @@ void displayInfo()
             avg_dir = 0;
             count = 0;
         }
-        count++;   
+        count++;
     } else {   
         if (gps.satellites.value() == 0) {
             Serial.print(".");
         } else {
-            Serial.println("Not all items valid");
+            Serial.print("location: ");
+            Serial.println(gps.location.isValid()); 
+            Serial.print("Time: ");
+            Serial.println(gps.time.isValid());
+            Serial.print("Speed: ");
+            Serial.println(gps.speed.isValid());
+            Serial.print("Satalites: ");
+            Serial.println(gps.satellites.value());
         }
     }
 }
 
 void loop() {
-    // updateMQTT();
     updateGPS(displayInfo);
     if (size_output > 950) {
         Serial.println();
         Serial.println(size_output);
         Serial.println(doc.memoryUsage());
-        if (WiFi.status() == WL_CONNECTED) {
+        if (WiFi.status() == WL_CONNECTED || setupWiFi(false) == WL_CONNECTED) {
             makeWifiPost(output);
         } else {
             sendGSM(output);

@@ -2,7 +2,7 @@
 
 WiFiClient wifiClient;
 
-void setupWiFi() {
+wl_status_t setupWiFi(bool force = true) {
   delay(10);
   Serial.println();
   Serial.print("Connecting to ");
@@ -12,8 +12,12 @@ void setupWiFi() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
-    if (connection_count++ > 60) {
-      setupWiFi();
+    if (connection_count++ > 20) {
+      if (force) {
+        setupWiFi(true);
+      } else {
+        return WiFi.status();
+      }
     }
   }
   randomSeed(micros());
@@ -21,11 +25,12 @@ void setupWiFi() {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  return WiFi.status();
 }
 
 void makeWifiPost(char* json) {
   if(WiFi.status()!= WL_CONNECTED) { 
-    setupWiFi();
+    setupWiFi(true);
   }
   HTTPClient http;
   String serverPath = "https://bootje.erickemmeren.nl/data";

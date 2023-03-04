@@ -6,5 +6,5 @@
 
 extern WiFiClient wifiClient;
 
-void setupWiFi();
+wl_status_t setupWiFi(bool force);
 void makeWifiPost(char*);
