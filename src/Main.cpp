@@ -7,7 +7,7 @@ JsonArray data_points = doc.createNestedArray("dp");
 char output[2024];
 size_t size_output = 0;
 
-const size_t size_moving_average = 30;
+const size_t size_moving_average = 256;
 double moving_average[size_moving_average]; 
 int moving_average_count = 0;
 
