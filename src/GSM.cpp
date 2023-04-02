@@ -12,11 +12,14 @@ void setupGSM() {
   // } 
 }
 
-void sendGSM(const char* body) {
+Result sendGSM(const char* body) {
   HTTP http(9600, MYPORT_RX, MYPORT_TX, 12);
   Result result_connect = http.connect();
   Serial.println("Result connect:");
   Serial.print(result_connect);
+  if (result_connect != SUCCESS) {
+    return result_connect;
+  }
 
   char response[64];
   Result result_post = http.post("https://bootje.erickemmeren.nl/data", body, response);
@@ -24,6 +27,8 @@ void sendGSM(const char* body) {
   Serial.println(result_post);
 
   Serial.print("Response: ");
-  Serial.println(response);
+  Serial.println(response); 
   http.disconnect();
+
+  return result_post;
 }

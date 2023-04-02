@@ -2,9 +2,10 @@
 #define ARDUINOJSON_POSITIVE_EXPONENTIATION_THRESHOLD 1e8
 #include <ArduinoJson.h>
 
-DynamicJsonDocument doc(2024);
+#define MAX_DATA_SIZE 79344
+DynamicJsonDocument doc(MAX_DATA_SIZE);
 JsonArray data_points = doc.createNestedArray("dp");
-char output[2024];
+char output[MAX_DATA_SIZE];
 size_t size_output = 0;
 
 const size_t size_moving_average = 512;
@@ -22,6 +23,7 @@ double min_speed = 3;
 unsigned long start_time = 0;
 unsigned int slow_period = 3600e3;      // 1 hour     (ms)
 unsigned int fast_period =   10e3;      // 10 seconds (ms)
+unsigned int gps_occurences = 6;
 unsigned int period = slow_period;
 unsigned int time_fast_period = 1 * 60e6; // 1 Minute (us)
 
@@ -124,8 +126,6 @@ void displayInfo()
             portEXIT_CRITICAL(&timerMux);
         }
         if ((millis() - start_time) > period) {
-            Serial.print("Satalites: ");
-            Serial.println(gps.satellites.value());
 
             start_time = millis();
             float datestamp = gps.date.value();
@@ -148,12 +148,8 @@ void displayInfo()
                     timestamp / 100.0
                 );
             }
-            message_count = (message_count + 1) % 6;
+            message_count = (message_count + 1) % gps_occurences;
             size_output = serializeJson(doc, output);
-            Serial.print("Size of output: ");
-            Serial.println(size_output);
-            Serial.print("Count: ");
-            Serial.println(count);
 
             avg_lat = 0;
             avg_lng = 0;
@@ -162,36 +158,28 @@ void displayInfo()
             count = 0;
         }
         count++;
-    } else {   
-        if (gps.satellites.value() == 0) {
-            Serial.print(".");
-        } else {
-            Serial.print("location: ");
-            Serial.println(gps.location.isValid()); 
-            Serial.print("Time: ");
-            Serial.println(gps.time.isValid());
-            Serial.print("Speed: ");
-            Serial.println(gps.speed.isValid());
-            Serial.print("Satalites: ");
-            Serial.println(gps.satellites.value());
-        }
     }
 }
 
+uint32_t max_size_output = 800;
+
 void loop() {
     updateGPS(displayInfo);
-    if (size_output > 950) {
-        Serial.println();
-        Serial.println(size_output);
-        Serial.println(doc.memoryUsage());
+
+    if (size_output > max_size_output) {
+        Result result = SUCCESS;
         if (WiFi.status() == WL_CONNECTED || setupWiFi(false) == WL_CONNECTED) {
             makeWifiPost(output);
         } else {
-            sendGSM(output);
+            result = sendGSM(output);
         }
-        serializeJsonPretty(doc, Serial);
-        doc.clear();
-        size_output = 0;
-        data_points = doc.createNestedArray("dp");
+        if (result == SUCCESS) {
+            doc.clear();
+            size_output = 0;
+            data_points = doc.createNestedArray("dp");
+            max_size_output = 800;
+        } else {
+            max_size_output += 800;
+        }
     }
 }

@@ -11,4 +11,4 @@
 #define MYPORT_RX 13
 
 void setupGSM();
-void sendGSM(const char* body);
+Result sendGSM(const char* body);
