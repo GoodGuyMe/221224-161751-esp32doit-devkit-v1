@@ -25,7 +25,7 @@ unsigned int slow_period = 3600e3;      // 1 hour     (ms)
 unsigned int fast_period =   10e3;      // 10 seconds (ms)
 unsigned int gps_occurences = 6;
 unsigned int period = slow_period;
-unsigned int time_fast_period = 1 * 60e6; // 1 Minute (us)
+unsigned int time_fast_period = 5 * 60e6; // 1 Minute (us)
 
 
 hw_timer_t * period_timer;
