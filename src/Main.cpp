@@ -2,9 +2,9 @@
 #define ARDUINOJSON_POSITIVE_EXPONENTIATION_THRESHOLD 1e8
 #include <ArduinoJson.h>
 
-#define MAX_DATA_SIZE 79344
-DynamicJsonDocument doc(MAX_DATA_SIZE);
-JsonArray data_points = doc.createNestedArray("dp");
+#define MAX_DATA_SIZE 49488
+StaticJsonDocument<MAX_DATA_SIZE> doc;
+JsonArray data_points;
 char output[MAX_DATA_SIZE];
 size_t size_output = 0;
 
@@ -19,13 +19,13 @@ double avg_lat = 0;
 double avg_lng = 0;
 double avg_speed = 0;
 double avg_dir = 0;
-double min_speed = 3;
+double min_speed = 2.5;
 unsigned long start_time = 0;
 unsigned int slow_period = 3600e3;      // 1 hour     (ms)
-unsigned int fast_period =   10e3;      // 10 seconds (ms)
+unsigned int fast_period =   30e3;      // 30 seconds (ms)
 unsigned int gps_occurences = 6;
 unsigned int period = slow_period;
-unsigned int time_fast_period = 5 * 60e6; // 1 Minute (us)
+unsigned int time_fast_period = 5 * 60e6; // 5 Minutes (us)
 
 
 hw_timer_t * period_timer;
@@ -40,6 +40,7 @@ double round2(double value) {
 
 void setup() {
     delay(10);
+    data_points = doc.createNestedArray("dp");
 
     pinMode(2, OUTPUT);
     digitalWrite(2, HIGH);
@@ -151,6 +152,9 @@ void displayInfo()
             message_count = (message_count + 1) % gps_occurences;
             size_output = serializeJson(doc, output);
 
+            Serial.print("size output: ");
+            Serial.println(size_output);
+
             avg_lat = 0;
             avg_lng = 0;
             avg_speed = 0;
@@ -168,11 +172,9 @@ void loop() {
 
     if (size_output > max_size_output) {
         Result result = SUCCESS;
-        if (WiFi.status() == WL_CONNECTED || setupWiFi(false) == WL_CONNECTED) {
-            makeWifiPost(output);
-        } else {
-            result = sendGSM(output);
-        }
+
+        result = sendGSM(output);
+        
         if (result == SUCCESS) {
             doc.clear();
             size_output = 0;
