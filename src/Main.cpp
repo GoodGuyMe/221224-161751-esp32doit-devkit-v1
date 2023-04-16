@@ -85,7 +85,7 @@ void displayInfo()
         avg_lng += gps.location.lng();
         avg_speed += gps.speed.knots();
         avg_dir += gps.course.deg();
-        if (movingAverage(gps.speed.knots()) > min_speed || gps_overload) {
+        if (movingAverage(gps.speed.knots()) > min_speed) {
             digitalWrite(2, HIGH);
             if (period_timer == NULL) {
                 period_timer = timerBegin(0, 80, true);
