@@ -15,7 +15,6 @@ void updateGPS(std::function<void(void)> return_func) {
     if (millis() > 5000 && gps.charsProcessed() < 10)
     {
         Serial.println(F("No GPS detected: check wiring."));
-        while (true);
     }
 }
 
