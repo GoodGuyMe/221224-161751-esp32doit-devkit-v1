@@ -1,6 +1,7 @@
 #include <GPS.h>
 
 TinyGPSPlus gps;
+bool gps_started = false;
 
 void setupGPS() {
     Serial2.begin(9600);
@@ -19,6 +20,13 @@ void updateGPS(std::function<void(void)> return_func) {
 }
 
 bool validGPS() {
-    return gps.location.isValid() && gps.time.isValid() && gps.speed.isValid() && 
-     (gps.location.isUpdated() || gps.time.isUpdated() || gps.speed.isUpdated());
+    if (gps_started) {
+        return gps.location.isValid() && gps.time.isValid() && gps.speed.isValid() && 
+        (gps.location.isUpdated() || gps.time.isUpdated() || gps.speed.isUpdated());
+    }
+    if (gps.charsProcessed() > 1000) {
+        gps_started = true;
+        return validGPS();
+    }
+    return false;
 }
