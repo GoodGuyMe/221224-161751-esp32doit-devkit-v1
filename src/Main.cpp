@@ -2,11 +2,9 @@
 #define ARDUINOJSON_POSITIVE_EXPONENTIATION_THRESHOLD 1e8
 #include <ArduinoJson.h>
 
-#define MAX_DATA_SIZE 49480
-StaticJsonDocument<MAX_DATA_SIZE> doc;
-JsonArray data_points;
-char output[MAX_DATA_SIZE];
-size_t size_output = 0;
+Data *data;
+size_t size_output = 100000;
+char *output;
 
 const size_t size_moving_average = 512;
 double moving_average[size_moving_average]; 
@@ -26,23 +24,24 @@ unsigned int fast_period =   30e3;      // 30 seconds (ms)
 unsigned int gps_occurences = 6;
 volatile unsigned long period = slow_period;
 unsigned int time_fast_period = 5 * 60e6; // 5 Minutes (us)
-uint8_t debug_flag = 1;
+uint8_t gps_overload = 0;
 
 hw_timer_t * period_timer;
 
 // rounds a number to 2 decimal places
 // example: round(3.14159) -> 3.14
 double round2(double value) {
-    return (long)(value * 100 + 0.5) / 100.0;
-}
-
-void ARDUINO_ISR_ATTR debug_timer() {
-    debug_flag = 0;
+    return (long)(value * 100L + 0.5) / 100.0;
 }
 
 void setup() {
     delay(10);
-    data_points = doc.createNestedArray("dp");
+
+    data = new Data(10);
+    output = (char *)malloc(sizeof(char) * 100000);
+    if (output == NULL) {
+        Serial.println("Could not allocate memory");
+    }
 
     pinMode(2, OUTPUT);
     digitalWrite(2, HIGH);
@@ -60,32 +59,7 @@ void setup() {
         moving_average[i] = 0.0;
     }
 
-    hw_timer_t *test_timer = timerBegin(0, 80, true);
-    timerAttachInterrupt(test_timer, &debug_timer, true);
-    timerAlarmWrite(test_timer, time_fast_period, false);
-    timerAlarmEnable(test_timer);
-
     digitalWrite(2, LOW);
-}
-
-void addMeasurement(double lat, double lng, double spd, double temp, double dir, double datestamp, double timestamp) {
-    JsonObject point = data_points.createNestedObject();
-    point["t"] = timestamp;
-    point["d"] = datestamp;
-    JsonObject measured_data = point.createNestedObject("p");
-    measured_data["A"] = lat;
-    measured_data["O"] = lng;
-    measured_data["S"] = spd;
-    measured_data["T"] = temp;
-    measured_data["D"] = dir;
-}
-
-void addTempMeasurement(double temp, double datestamp, double timestamp) {
-    JsonObject point = data_points.createNestedObject();
-    point["t"] = timestamp;
-    point["d"] = datestamp;
-    JsonObject measured_data = point.createNestedObject("p");
-    measured_data["T"] = temp;
 }
 
 void ARDUINO_ISR_ATTR on_timer() {
@@ -110,7 +84,7 @@ void displayInfo()
         avg_lng += gps.location.lng();
         avg_speed += gps.speed.knots();
         avg_dir += gps.course.deg();
-        if (movingAverage(gps.speed.knots()) > min_speed) {
+        if (movingAverage(gps.speed.knots()) > min_speed || gps_overload) {
             digitalWrite(2, HIGH);
             if (period_timer == NULL) {
                 period_timer = timerBegin(0, 80, true);
@@ -129,28 +103,23 @@ void displayInfo()
             float datestamp = gps.date.value();
             float timestamp = gps.time.value();
 
-            if (period == fast_period || message_count == 0) {
-                addMeasurement(
-                    avg_lat / (double)count, 
-                    avg_lng / (double)count, 
-                    round2(avg_speed / (double)count), 
+            DataPoint *dp = (period == fast_period || message_count == 0) ?
+                new DataPoint(
+                    timestamp / 100.0,
+                    datestamp, 
                     round2(getTemperature()), 
-                    round2(avg_dir / (double)count),
-                    datestamp,
-                    timestamp / 100.0
+                    round2(avg_dir   / (double)count), 
+                    round2(avg_speed / (double)count), 
+                    avg_lat / (double)count, 
+                    avg_lng / (double)count
+                ) :
+                new DataPoint(
+                    timestamp / 100.0, 
+                    datestamp, 
+                    round2(getTemperature())
                 );
-            } else {
-                addTempMeasurement(
-                    round2(getTemperature()),
-                    datestamp,
-                    timestamp / 100.0
-                );
-            }
-            message_count = (message_count + 1) % gps_occurences;
-            size_output = serializeJson(doc, output);
 
-            Serial.print("size output: ");
-            Serial.println(size_output);
+            data->add(dp);
 
             avg_lat = 0;
             avg_lng = 0;
@@ -167,24 +136,37 @@ uint32_t max_size_output = 800;
 void loop() {
     updateGPS(displayInfo);
 
-    if (debug_flag) {
-        debug_flag = 0;
-        Serial.print("Memory size: ");
-        Serial.println(ESP.getFreeHeap());
+    if (Serial.available() > 0) {
+        char *buf = (char *)malloc(sizeof(char));
+        Serial.read(buf, 1);
+        if (*buf == '0') {
+            gps_overload = 0;
+        } else if (*buf == '1') {
+            gps_overload = 1;
+        } else if (*buf == 'm') {
+            Serial.print("Free heap: ");
+            Serial.println(ESP.getFreeHeap());
+        }
+        free(buf);
     }
 
-    if (size_output > max_size_output) {
+    size_t size = data->getSerializedJson(output, size_output);
+
+    if (size > max_size_output) {
         Result result = SUCCESS;
 
-        // result = sendGSM(output);
+        result = sendGSM(output);
         
         if (result == SUCCESS) {
-            doc.clear();
-            size_output = 0;
-            data_points = doc.createNestedArray("dp");
+            delete data;
+
+            data = new Data(10);
+            
             max_size_output = 800;
         } else {
             max_size_output += 800;
-        }
+            Serial.print("max_size_output: ");
+            Serial.println(max_size_output);
+        } 
     }
 }
