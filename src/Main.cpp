@@ -36,6 +36,9 @@ double round2(double value) {
 
 void setup() {
     delay(10);
+    
+    pinMode(2, OUTPUT);
+    digitalWrite(2, HIGH);
 
     data = new Data(10);
     output = (char *)malloc(sizeof(char) * 100000);
@@ -43,8 +46,6 @@ void setup() {
         Serial.println("Could not allocate memory");
     }
 
-    pinMode(2, OUTPUT);
-    digitalWrite(2, HIGH);
     Serial.begin(115200);
 
     period_timer = NULL;
