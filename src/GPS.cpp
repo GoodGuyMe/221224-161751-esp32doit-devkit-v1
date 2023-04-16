@@ -24,7 +24,8 @@ bool validGPS() {
         return gps.location.isValid() && gps.time.isValid() && gps.speed.isValid() && 
         (gps.location.isUpdated() || gps.time.isUpdated() || gps.speed.isUpdated());
     }
-    if (gps.charsProcessed() > 1000) {
+    if (millis() > 60000) {
+        Serial.println("Valid gps signal!");
         gps_started = true;
         return validGPS();
     }
