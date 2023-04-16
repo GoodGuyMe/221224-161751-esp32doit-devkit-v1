@@ -2,7 +2,7 @@
 #define ARDUINOJSON_POSITIVE_EXPONENTIATION_THRESHOLD 1e8
 #include <ArduinoJson.h>
 
-#define MAX_DATA_SIZE 49488
+#define MAX_DATA_SIZE 49480
 StaticJsonDocument<MAX_DATA_SIZE> doc;
 JsonArray data_points;
 char output[MAX_DATA_SIZE];
@@ -24,12 +24,11 @@ unsigned long start_time = 0;
 unsigned int slow_period = 3600e3;      // 1 hour     (ms)
 unsigned int fast_period =   30e3;      // 30 seconds (ms)
 unsigned int gps_occurences = 6;
-unsigned int period = slow_period;
+volatile unsigned long period = slow_period;
 unsigned int time_fast_period = 5 * 60e6; // 5 Minutes (us)
-
+uint8_t debug_flag = 1;
 
 hw_timer_t * period_timer;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 // rounds a number to 2 decimal places
 // example: round(3.14159) -> 3.14
@@ -37,6 +36,9 @@ double round2(double value) {
     return (long)(value * 100 + 0.5) / 100.0;
 }
 
+void ARDUINO_ISR_ATTR debug_timer() {
+    debug_flag = 0;
+}
 
 void setup() {
     delay(10);
@@ -57,6 +59,12 @@ void setup() {
     for (int i = 0; i < size_moving_average; i++) {
         moving_average[i] = 0.0;
     }
+
+    hw_timer_t *test_timer = timerBegin(0, 80, true);
+    timerAttachInterrupt(test_timer, &debug_timer, true);
+    timerAlarmWrite(test_timer, time_fast_period, false);
+    timerAlarmEnable(test_timer);
+
     digitalWrite(2, LOW);
 }
 
@@ -81,11 +89,8 @@ void addTempMeasurement(double temp, double datestamp, double timestamp) {
 }
 
 void ARDUINO_ISR_ATTR on_timer() {
-    portENTER_CRITICAL_ISR(&timerMux);
     period = slow_period;
     digitalWrite(2, LOW);
-    portEXIT_CRITICAL_ISR(&timerMux);
-
 }
 
 double movingAverage(double speed) {
@@ -94,9 +99,6 @@ double movingAverage(double speed) {
     double result = 0.0;
     for (int i = 0; i < size_moving_average; i++) {
         result += moving_average[i];
-    }
-    if (moving_average_count == 0) {
-        Serial.println(millis());
     }
     return result / (double)size_moving_average;
 }
@@ -109,14 +111,9 @@ void displayInfo()
         avg_speed += gps.speed.knots();
         avg_dir += gps.course.deg();
         if (movingAverage(gps.speed.knots()) > min_speed) {
-            portENTER_CRITICAL(&timerMux);
-            period = fast_period;
             digitalWrite(2, HIGH);
             if (period_timer == NULL) {
                 period_timer = timerBegin(0, 80, true);
-                if (period_timer == NULL) {
-                    period = fast_period;
-                }
                 timerAttachInterrupt(period_timer, &on_timer, true);
                 timerAlarmWrite(period_timer, time_fast_period, false);
                 timerAlarmEnable(period_timer);
@@ -124,7 +121,7 @@ void displayInfo()
                 timerRestart(period_timer);
                 timerAlarmEnable(period_timer);
             }
-            portEXIT_CRITICAL(&timerMux);
+            period = fast_period;
         }
         if ((millis() - start_time) > period) {
 
@@ -170,10 +167,16 @@ uint32_t max_size_output = 800;
 void loop() {
     updateGPS(displayInfo);
 
+    if (debug_flag) {
+        debug_flag = 0;
+        Serial.print("Memory size: ");
+        Serial.println(ESP.getFreeHeap());
+    }
+
     if (size_output > max_size_output) {
         Result result = SUCCESS;
 
-        result = sendGSM(output);
+        // result = sendGSM(output);
         
         if (result == SUCCESS) {
             doc.clear();
