@@ -50,7 +50,7 @@ void setup() {
 
     period_timer = NULL;
 
-    Serial.println("GPS NEO 6M + GSM + BMP280");
+    Serial.println("GPS NEO 6M + GSM + BMP280 V2.0");
     Serial.setTimeout(500);
     setupGPS();
     setupGSM();
