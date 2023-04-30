@@ -18,6 +18,7 @@ Result sendGSM(const char* body) {
   Serial.println("Result connect:");
   Serial.print(result_connect);
   if (result_connect != SUCCESS) {
+    http.disconnect();
     return result_connect;
   }
 
